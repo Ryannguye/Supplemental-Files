@@ -1,0 +1,97 @@
+	DIMENSION X(20000),Y(20000),X1(20000),Y1(20000)
+      DIMENSION HH11(20000),HH12(20000),HH13(20000),HH14(20000),
+     &          HH15(20000),HH16(20000),HH17(20000),HH18(20000)
+      DIMENSION WBAR1(20000),U13(20000),H1(20000)
+C
+C     ----------------------------------------------------------------	
+	OPEN(5,FILE='node1.inp')
+	OPEN(6,FILE='temp.inp')
+	OPEN(7,FILE='diss.dat')
+C
+C     ----------------------------------------------------------------
+	READ(5,*) NN
+	DO 100 I=1,NN
+	READ(5,*) X(I),Y(I)
+  100 CONTINUE
+C
+C     MECHANICAL PROPERTIES & PLATE DIMENSIONS-------------------------
+      PI=3.141542654
+	THICK=10.
+	H0=THICK/2.
+	ELASTIC=2.1E4
+      POISS=0.3
+      C11=ELASTIC/(1-(POISS**2.0))
+      C12=POISS*ELASTIC/(1-(POISS**2.0))
+      D11=C11*((H0**3)-((-H0)**3))/3.0
+      D12=C12*((H0**3)-((-H0)**3))/3.0
+	EE=H0**3
+C
+C
+C     EIGENSTRAIN(MAGNITUDE & REGION)-----------------------------------	
+	ALPHA=15.6E-6
+	TROOM=20.0
+	TP=800.0
+	SIGMAY=30.0
+	READ(6,*) BREATHMAX
+	RAD=BREATHMAX/2
+	STIFF=ELASTIC/(RAD*(1+POISS))
+C	TM=1530.0
+	EPS=ALPHA*(TROOM-TP)+SIGMAY*(1/(RAD*STIFF)+(1-POISS)/ELASTIC)
+C	WRITE(7,*) EPS
+C	RP=SQRT(2*DIFF*Q/(PI*CONDUCT*VEL*E*(TP-TROOM)))
+C	RM=SQRT(2*DIFF*Q/(PI*CONDUCT*VEL*E*(TM-TROOM)))
+C	EPSM=ALPHA*(TROOM-TM)
+C	EPSP=-2*ALPHA*Q/(PI*RHO*CP*VEL*E*RP*RM)
+C	EPS=RM*EPSM/RP+(RP-RM)*EPSP/RP
+C
+C     FIRST------------------------------------------------------------
+      A12=200.*sqrt(2.)/2.
+	A11=14
+C	A12=PI*RP/4.0
+	HH110=(A11**2)*(ATAN(A12/A11)-ATAN((-A12)/A11))
+	HH120=(A11**2)*(ATAN(A12/A11)-ATAN(A12/(-A11)))
+      HH130=(A12**2)*(ATAN(A11/A12)-ATAN((-A11)/A12))
+	HH140=(A12**2)*(ATAN(A11/A12)-ATAN(A11/(-A12)))
+	HH150=A11*A12*LOG(A11**2+A12**2)
+	HH160=A11*A12*LOG(A11**2+A12**2)
+	HH170=A11*A12*LOG(A11**2+A12**2)
+	HH180=A11*A12*LOG(A11**2+A12**2)
+	H100=0.5*(HH110+HH120+HH130+HH140+HH150+HH160+HH170+HH180)
+	hEIN=7.85
+      CURVATURE1=0.5*((C11+C12)/(D11+D12))*EPS*(H0**2-(H0-HEIN)**2)
+C     ----------------------------------------------------------------
+	WRITE(7,400)
+  400 FORMAT('VARIABLE="X","Y","DISPLACEMENT"',/,
+     &        'ZONE I=121, J=121, F=POINT')
+C     ----------------------------------------------------------------
+	DO 300 I=1,NN
+	X1(I)=X(I)
+	Y1(I)=Y(I)
+      HH11(I)=((X1(I)+A11)**2)*(ATAN((Y1(I)+A12)/(X1(I)+A11))
+     &        -ATAN((Y1(I)-A12)/(X1(I)+A11)))
+	HH12(I)=((X1(I)-A11)**2)*(ATAN((Y1(I)-A12)/(X1(I)-A11))
+     &        -ATAN((Y1(I)+A12)/(X1(I)-A11)))
+	HH13(I)=((Y1(I)+A12)**2)*(ATAN((X1(I)+A11)/(Y1(I)+A12))
+     &        -ATAN((X1(I)-A11)/(Y1(I)+A12)))
+	HH14(I)=((Y1(I)-A12)**2)*(ATAN((X1(I)-A11)/(Y1(I)-A12))
+     &        -ATAN((X1(I)+A11)/(Y1(I)-A12)))
+	HH15(I)=(X1(I)+A11)*(Y1(I)+A12)
+     &        *LOG((X1(I)+A11)**2+(Y1(I)+A12)**2)
+	HH16(I)=-(X1(I)-A11)*(Y1(I)+A12)
+     &        *LOG((X1(I)-A11)**2+(Y1(I)+A12)**2)
+	HH17(I)=(X1(I)-A11)*(Y1(I)-A12)
+     &        *LOG((X1(I)-A11)**2+(Y1(I)-A12)**2)
+	HH18(I)=-(X1(I)+A11)*(Y1(I)-A12)
+     &        *LOG((X1(I)+A11)**2+(Y1(I)-A12)**2)
+	H1(I)=0.5*(HH11(I)+HH12(I)+HH13(I)+HH14(I)+HH15(I)+HH16(I)
+     &      +HH17(I)+HH18(I))
+	WBAR1(I)=(1/(PI*(A11**2)))*(H1(I)-H100)
+	U13(I)=-0.5*(1.0+POISS)*CURVATURE1*A11*A11*WBAR1(I)
+  300 CONTINUE
+C
+
+	WRITE(7,340) (U13(I),i=1,49)
+
+  340 FORMAT(49(F6.3,1X))
+      STOP
+	END
